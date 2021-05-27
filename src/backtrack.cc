@@ -57,7 +57,7 @@ std::vector<Vertex> get_parents(Vertex u, const Graph &query,
  * Get the initial extendable candidates of a data graph vertex
  * Some vertices in the candidate set may not be valid
  */
-std::vector<Vertex> extendable_candidates(Vertex u, const Graph &query, 
+std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query, 
                                           const Graph &data, const CandidateSet &cs,
                                           const std::unordered_map<Vertex, Vertex> &embedding) {
   std::vector<Vertex> candidates;
@@ -87,7 +87,7 @@ std::vector<Vertex> extendable_candidates(Vertex u, const Graph &query,
  * Any vertex in query_next can be next extendable vertext
  * It is assumed that query_next is not empty
  */
-Vertex extendable_vertex(const std::unordered_set<Vertex> &query_next, const CandidateSet &cs) {
+Vertex get_extendable_vertex(const std::unordered_set<Vertex> &query_next, const CandidateSet &cs) {
   Vertex next = *query_next.begin(); // the first element in the set
   int candidate_size = cs.GetCandidateSize(next);
   for (auto itr = ++query_next.begin(); itr != query_next.end(); ++itr) {
@@ -180,7 +180,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       else {
         pair_to_visit.push(current); // re-push current
         // get extendable candidates of current.first
-        std::vector<Vertex> candidates = extendable_candidates(current.first, data, query, cs, partial_embedding);
+        std::vector<Vertex> candidates = get_extendable_candidates(current.first, data, query, cs, partial_embedding);
         for (Vertex v : candidates) {
           if (data_visited.find(v) == data_visited.end()) {
             pair_to_visit.push(std::pair<Vertex, Vertex>(current.first, v));
@@ -206,7 +206,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       data_visited.insert(current.second);
 
       // Find next extendable candidate
-      Vertex next = extendable_vertex(query_next, cs);
+      Vertex next = get_extendable_vertex(query_next, cs);
       query_visited[next] = true;
       query_next.erase(current.first);
       pair_to_visit.push(std::pair<Vertex, Vertex>(next, -1));
