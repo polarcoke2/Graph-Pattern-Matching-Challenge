@@ -9,9 +9,9 @@ Backtrack::Backtrack() {}
 Backtrack::~Backtrack() {}
 
 namespace {
-// Time complexity: O(|V(query)|)
+/* Time complexity: O(|V(query)|) */
 Vertex find_root(const Graph &query, const CandidateSet &cs) {
-  // root is a vetex in query which has the minimum |C(u)|/deg(u)
+  // root is a vertex in query which has the minimum |C(u)|/deg(u)
   Vertex root = 0; // Index starts with 0
   double best_score = cs.GetCandidateSize(root) / query.GetDegree(root);
 
@@ -25,6 +25,10 @@ Vertex find_root(const Graph &query, const CandidateSet &cs) {
   return root;
 }
 
+/* 
+ * Get the initial extendable candidates of a vertex 
+ * Some vertices in the candidate set may not be valid
+ */
 std::vector<Vertex> extendable_candidates(Vertex u, const CandidateSet &cs) {
   std::vector<Vertex> candidates;
   // push back in reverse order
@@ -39,7 +43,7 @@ std::vector<Vertex> extendable_candidates(Vertex u, const CandidateSet &cs) {
 Vertex extendable_vertex(const std::unordered_set<Vertex> &query_unvisited, const CandidateSet &cs) {
   Vertex next = *query_unvisited.begin(); // the first element in the set
   int candidate_size = cs.GetCandidateSize(next);
-  for (auto itr = ++query_unvisited.begin(); itr != query_unvisited.end(); itr++) {
+  for (auto itr = ++query_unvisited.begin(); itr != query_unvisited.end(); ++itr) {
     Vertex v = *itr;
     // choose an element with the smallest candidate size
     if (cs.GetCandidateSize(v) < candidate_size) {
@@ -75,8 +79,8 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
   std::unordered_set<Vertex> query_unvisited;
   for (Vertex i=0; i<query.GetNumVertices(); i++)
     query_unvisited.insert(i);
-  // Question: do we need query_visited and data_visited when we know whether  
-  // a vertex is visited by checking if the vertex is in parital_embedding?
+  // Question: do we need both query_visited and data_visited when we know whether  
+  // a vertex is visited by checking if the vertex is in partial_embedding?
   std::vector<bool> query_visited(query.GetNumVertices(), false);
   std::vector<bool> data_visited(data.GetNumVertices(), false);
   /* 
@@ -85,7 +89,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
    * If p.second is not -1 then (p.first, p.second) is an extendable candidate
    */ 
   std::stack<std::pair<Vertex, Vertex>> pair_to_visit;
-  std::unordered_map<Vertex, Vertex> parital_embedding;
+  std::unordered_map<Vertex, Vertex> partial_embedding;
   
   Vertex root = find_root(query, cs);
   pair_to_visit.push(std::pair<Vertex, Vertex>(root, -1)); // -1 means NULL
@@ -97,13 +101,13 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
     // current.first is an extendable vertex
     if (current.second == -1) {
       // backtrack
-      if (query_visited[current.first]) {  
+      if (query_visited[current.first]) {
         query_visited[current.first] = false; // mark unvisited
         query_unvisited.insert(current.first);
         /* duplicate code */
         // (current.first, old_data_vertex) is in partial_embedding
-        if (parital_embedding.find(current.first) != parital_embedding.end()) {
-          Vertex old_data_vertex = parital_embedding[current.first];
+        if (partial_embedding.find(current.first) != partial_embedding.end()) {
+          Vertex old_data_vertex = partial_embedding[current.first];
           data_visited[old_data_vertex] = false;
         }
         /* end duplicate code */
@@ -126,16 +130,16 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
     else {
       /* duplicate code */
       // (current.first, old_data_vertex) is in partial_embedding
-      if (parital_embedding.find(current.first) != parital_embedding.end()) {
-        Vertex old_data_vertex = parital_embedding[current.first];
+      if (partial_embedding.find(current.first) != partial_embedding.end()) {
+        Vertex old_data_vertex = partial_embedding[current.first];
         data_visited[old_data_vertex] = false;
       }
       /* end duplicate code */
       // Here is where a new pair is added to the embedding
-      parital_embedding[current.first] = current.second; // update parital_embedding
-      if (parital_embedding.size() == query.GetNumVertices()) {
+      partial_embedding[current.first] = current.second; // update partial_embedding
+      if (partial_embedding.size() == query.GetNumVertices()) {
         // Or if (query_unvisited.size() == 0)
-        print_embedding(parital_embedding);
+        print_embedding(partial_embedding);
         continue;
       }
       data_visited[current.second] = true;
