@@ -15,7 +15,7 @@ Vertex find_root(const Graph &query, const CandidateSet &cs) {
   Vertex root = 0; // Index starts with 0
   double best_score = cs.GetCandidateSize(root) / query.GetDegree(root);
 
-  for (int i=1; i<query.GetNumVertices(); i++) {
+  for (int i=1; i<(int)query.GetNumVertices(); i++) {
     double new_score = cs.GetCandidateSize(i) / query.GetDegree(i);
     if (new_score < best_score) {
       root = i;
@@ -152,15 +152,17 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       // backtrack
       if (query_visited[current.first]) {
         query_visited[current.first] = false; // mark unvisited
+        query_next.insert(current.first); // insert current.first back to query_next
+
         // remove adjacent vertices to current.first
         for (Vertex neighbor : get_neighbors(current.first, query)) {
-          // A vertex in partial embedding is not in query_visited
+          // neighbor is either in parital_embedding or query_next
           if (partial_embedding.find(neighbor) != partial_embedding.end()) continue;
           
           bool is_connected = false;
           for (Vertex v : get_neighbors(neighbor, query)) {
-            // If query_visited[v] is true, then partial_embedding[v] must exist
-            if (query_visited[v]) {
+            // query_visited[v] can be true when partial_embedding[v] does not exist
+            if (partial_embedding.find(v) != partial_embedding.end()) {
               is_connected = true;
               break;
             }
@@ -170,13 +172,12 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
           }
         }
 
-        /* duplicate code */
         // (current.first, old_data_vertex) is in partial_embedding
         if (partial_embedding.find(current.first) != partial_embedding.end()) {
           Vertex old_data_vertex = partial_embedding[current.first];
           data_visited.erase(old_data_vertex);
+          partial_embedding.erase(current.first);
         }
-        /* end duplicate code */
       } 
       // grow
       else {
@@ -207,7 +208,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
     else {
       // Here is where a new pair is added to the embedding
       partial_embedding[current.first] = current.second; // update partial_embedding
-      // std::cout << "[DEBUG] partial embedding size: " << partial_embedding.size() << "\n";
+      std::cout << "[DEBUG] partial embedding size: " << partial_embedding.size() << "\n";
       if (partial_embedding.size() == query.GetNumVertices()) {
         print_embedding(partial_embedding);
         continue;
