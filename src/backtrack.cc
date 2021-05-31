@@ -206,6 +206,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       data_visited.insert(current.second);
 
       // Find next extendable candidate
+      query_next.insert(current.first);
       Vertex next = get_extendable_vertex(query_next, cs);
       query_visited[next] = true;
       query_next.erase(current.first);
