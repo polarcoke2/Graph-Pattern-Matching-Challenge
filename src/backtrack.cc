@@ -171,10 +171,10 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
   Vertex root = find_root(query, cs);
   pair_to_visit.push(std::pair<Vertex, Vertex>(root, -1)); // -1 means NULL
 
-  int cnt = 0;
-  int limit = 70;
+  int cnt = 0; // the number of embedding
+  int limit = 100000; // 10^5
+
   while (!pair_to_visit.empty()) {
-    if (DEBUG && cnt++ == limit) break;
     // get current vertex
     std::pair<Vertex, Vertex> current = pair_to_visit.top(); pair_to_visit.pop();
 
@@ -224,7 +224,6 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
         // which are adjacent to current.first and not in query_next
         DEBUG && std::cout << "[DEBUG] new query_next for " << current.first << ": ";
         for (Vertex v : get_neighbors(current.first, query)) {
-          // TODO: which one is correct (maybe both): query_vistided[v] is false vs partial_embedding[v] is NULL
           if (!query_visited[v] && query_next.find(v) == query_next.end()) {
             DEBUG && std::cout << v << ", ";
             query_next.insert(v);
@@ -253,6 +252,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
 
       if (partial_embedding.size() == query.GetNumVertices()) {
         print_embedding(partial_embedding);
+        if (cnt++ == limit) break;
         continue;
       }
       data_visited.insert(current.second);
@@ -263,4 +263,5 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       pair_to_visit.push(std::pair<Vertex, Vertex>(next, -1));
     }
   }
+  std::cout << "[DEBUG] # embeddings: " << cnt << "\n";
 }

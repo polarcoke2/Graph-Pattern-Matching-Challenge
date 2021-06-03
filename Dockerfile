@@ -12,10 +12,14 @@ ENV PATH="/opt/rh/devtoolset-7/root/usr/bin:$PATH"
 RUN source scl_source enable devtoolset-7
 RUN yum clean all
 
+# cd does not work in Dockerfile. Use WORKDIR instead
 WORKDIR /app
 COPY . .
 RUN mkdir build
+# the result of cmake is located in the work directory thus WORKDIR /app/build
 WORKDIR /app/build
 RUN cmake /app
 RUN make 
+# change the current directory vack to /app
+WORKDIR /app
 CMD ["/bin/sh"]
