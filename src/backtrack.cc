@@ -9,6 +9,11 @@ Backtrack::Backtrack() {}
 Backtrack::~Backtrack() {}
 
 namespace {
+/* Print debugging messages if DEBUG is true */
+bool DEBUG = false;
+/* Verify if an embedding is correct if VERIFY is true  */
+bool VERIFY = true;
+
 /* Time complexity: O(|V(query)|) */
 Vertex find_root(const Graph &query, const CandidateSet &cs) {
   // root is a vertex in query which has the minimum |C(u)|/deg(u)
@@ -30,7 +35,7 @@ Vertex find_root(const Graph &query, const CandidateSet &cs) {
  */
 std::vector<Vertex> get_neighbors(Vertex u, const Graph &query) {
   std::vector<Vertex> neighbors;
-  for (int i=query.GetNeighborStartOffset(u); i<query.GetNeighborEndOffset(u); i++) {
+  for (int i=query.GetNeighborStartOffset(u); i<(int)query.GetNeighborEndOffset(u); i++) {
     Vertex neighbor = query.GetNeighbor(i);
     neighbors.push_back(neighbor);
   }
@@ -89,9 +94,11 @@ std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query,
  */
 Vertex get_extendable_vertex(const std::unordered_set<Vertex> &query_next, const CandidateSet &cs) {
   Vertex next = *query_next.begin(); // the first element in the set
+  DEBUG && std::cout << "[DEBUG] query_next: " << next;
   int candidate_size = cs.GetCandidateSize(next);
   for (auto itr = ++query_next.begin(); itr != query_next.end(); ++itr) {
     Vertex v = *itr;
+    DEBUG && std::cout << ", " << v;
     // choose an element with the smallest candidate size
     // TODO: the standard should be the size of "extendable candidates", not candidate size in CS
     if ((int)cs.GetCandidateSize(v) < candidate_size) {
@@ -99,8 +106,24 @@ Vertex get_extendable_vertex(const std::unordered_set<Vertex> &query_next, const
       candidate_size = cs.GetCandidateSize(v);
     }
   }
-
+  DEBUG && std::cout << "\n";
   return next;
+}
+
+bool verify_embedding(const std::vector<std::pair<Vertex, Vertex>> M) {
+  // int size = M.size();
+  std::unordered_set<Vertex> data_visited;
+
+  for (auto p : M) {
+    // Check if M is injective (u != v -> M(u) != M(v))
+    // It is assumed that there is no duplicate p.first 
+    if (data_visited.find(p.second) == data_visited.end()) {
+      data_visited.insert(p.second);
+    } else {
+      return false; // Wrong
+    }
+  }
+  return true;
 }
 
 void print_embedding(const std::unordered_map<Vertex, Vertex> &embedding) {
@@ -113,6 +136,11 @@ void print_embedding(const std::unordered_map<Vertex, Vertex> &embedding) {
   for (int i=1; i < (int)M.size(); i++)
     std::cout << ", (" << M[i].first << ", " << M[i].second << ")";
   std::cout << "}" << "\n";
+
+  if (VERIFY) {
+    std::string result = verify_embedding(M) ? "correct" : "wrong";
+    std::cout << "Embedding is " << result << "\n";
+  }
 }
 }  // namespace
 
@@ -143,7 +171,10 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
   Vertex root = find_root(query, cs);
   pair_to_visit.push(std::pair<Vertex, Vertex>(root, -1)); // -1 means NULL
 
+  int cnt = 0;
+  int limit = 70;
   while (!pair_to_visit.empty()) {
+    if (DEBUG && cnt++ == limit) break;
     // get current vertex
     std::pair<Vertex, Vertex> current = pair_to_visit.top(); pair_to_visit.pop();
 
@@ -151,12 +182,13 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
     if (current.second == -1) {
       // backtrack
       if (query_visited[current.first]) {
+        DEBUG && std::cout << "[DEBUG] BACKTRACK vertex: " << current.first << "\n";
         query_visited[current.first] = false; // mark unvisited
         query_next.insert(current.first); // insert current.first back to query_next
 
         // remove adjacent vertices to current.first
         for (Vertex neighbor : get_neighbors(current.first, query)) {
-          // neighbor is either in parital_embedding or query_next
+          // neighbor is either in partial_embedding or query_next
           if (partial_embedding.find(neighbor) != partial_embedding.end()) continue;
           
           bool is_connected = false;
@@ -181,6 +213,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       } 
       // grow
       else {
+        DEBUG && std::cout << "[DEBUG] GROW vertex: " << current.first << "\n";
         pair_to_visit.push(current); // re-push current
         query_visited[current.first] = true; // mark visited
 
@@ -189,26 +222,35 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
 
         // Add unvisited query vertices to query_next
         // which are adjacent to current.first and not in query_next
+        DEBUG && std::cout << "[DEBUG] new query_next for " << current.first << ": ";
         for (Vertex v : get_neighbors(current.first, query)) {
-          if (query_next.find(v) == query_next.end()) {
+          // TODO: which one is correct (maybe both): query_vistided[v] is false vs partial_embedding[v] is NULL
+          if (!query_visited[v] && query_next.find(v) == query_next.end()) {
+            DEBUG && std::cout << v << ", ";
             query_next.insert(v);
           }
         }
+        DEBUG && std::cout << "\n";
 
         // get extendable candidates of current.first
         std::vector<Vertex> candidates = get_extendable_candidates(current.first, query, data, cs, partial_embedding);
+        DEBUG && std::cout << "[DEBUG] new extendable candidates for " << current.first << ": ";
         for (Vertex v : candidates) {
           if (data_visited.find(v) == data_visited.end()) {
+            DEBUG && std::cout << "(" << current.first << ", " << v << "), ";
             pair_to_visit.push(std::pair<Vertex, Vertex>(current.first, v));
           }
         }
+        DEBUG && std::cout << "\n";
       }
     }
     // (current.first, current.second) is an extendable candidate
     else {
       // Here is where a new pair is added to the embedding
       partial_embedding[current.first] = current.second; // update partial_embedding
-      std::cout << "[DEBUG] partial embedding size: " << partial_embedding.size() << "\n";
+      // std::cout << "[DEBUG] partial embedding size: " << partial_embedding.size() << "\n";
+      if (DEBUG) print_embedding(partial_embedding); // for debugging
+
       if (partial_embedding.size() == query.GetNumVertices()) {
         print_embedding(partial_embedding);
         continue;
@@ -217,6 +259,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
 
       // Find next extendable vertex
       Vertex next = get_extendable_vertex(query_next, cs);
+      // std::cout << "[DEBUG] extendable vertex: " << next << "\n";
       pair_to_visit.push(std::pair<Vertex, Vertex>(next, -1));
     }
   }
