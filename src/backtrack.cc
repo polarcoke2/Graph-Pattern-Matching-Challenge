@@ -13,15 +13,18 @@ namespace {
 /* Print debugging messages if DEBUG is true */
 bool DEBUG = false;
 /* Verify if an embedding is correct if VERIFY is true  */
-bool VERIFY = false;
+bool VERIFY = true;
+bool ALL_CORRECT = true;
 
 /* Print in a debug mode if PRINT_DEBUG is true */
-bool PRINT_DEBUG = false;
+bool PRINT_DEBUG = true;
 /* Print in a submission format if PRINT_SUBMISSION is true */
 bool PRINT_SUBMISSION = true;
 /* Print in a file if PRINT_FILE is true */
 bool PRINT_FILE = true;
 std::ofstream out;
+/* Print the number of embeddings if PRINT_CNT is true  */
+bool PRINT_CNT = true;
 
 /* Time complexity: O(|V(query)|) */
 Vertex find_root(const Graph &query, const CandidateSet &cs) {
@@ -71,17 +74,14 @@ std::vector<Vertex> get_parents(Vertex u, const Graph &query,
  * Get the initial extendable candidates of a data graph vertex
  * Some vertices in the candidate set may not be valid
  */
-std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query, 
-                                          const Graph &data, const CandidateSet &cs,
-                                          const std::unordered_map<Vertex, Vertex> &embedding) {
-  
-  DEBUG && std::cout << "[DEBUG] Get extendable candidates for: " << u << "\n";
-  std::vector<Vertex> candidates;
+int get_num_extendable_candidates(Vertex u, const Graph &query,
+                                  const Graph &data, const CandidateSet &cs,
+                                  const std::unordered_map<Vertex, Vertex> &embedding) {
+  int count = 0;
   std::vector<Vertex> parents = get_parents(u, query, embedding);
   // push back in reverse order
   for (int i=cs.GetCandidateSize(u)-1; i>=0; i--) {
     Vertex candidate = cs.GetCandidate(u, i);
-    DEBUG && std::cout << "[DEBUG] candidate: " << candidate << " ";
     // for every parent of vertex u, if M[u_parent] and candidate are not connected, fail
     bool is_connected = true;
     for (Vertex parent : parents) {
@@ -91,12 +91,40 @@ std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query,
         break;
       }
     }
-    DEBUG && std:: cout << "is" << (is_connected? " ": " not ") << "valid\n";
     if (is_connected) {
-      candidates.push_back(candidate);
+      count++;
     }
   }
-  return candidates;
+  return count;
+}
+
+std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query,
+                                              const Graph &data, const CandidateSet &cs,
+                                              const std::unordered_map<Vertex, Vertex> &embedding) {
+
+    DEBUG && std::cout << "[DEBUG] Get extendable candidates for: " << u << "\n";
+    std::vector<Vertex> candidates;
+    std::vector<Vertex> parents = get_parents(u, query, embedding);
+    // push back in reverse order
+    DEBUG && std::cout << "[DEBUG] candidate:";
+    for (int i=cs.GetCandidateSize(u)-1; i>=0; i--) {
+        Vertex candidate = cs.GetCandidate(u, i);
+        // for every parent of vertex u, if M[u_parent] and candidate are not connected, fail
+        bool is_connected = true;
+        for (Vertex parent : parents) {
+            // parent is guaranteed to be included in embedding
+            if (!data.IsNeighbor(embedding.find(parent)->second, candidate)) {
+                is_connected = false;
+                break;
+            }
+        }
+        if (is_connected) {
+            DEBUG && std::cout << " " << candidate;
+            candidates.push_back(candidate);
+        }
+    }
+    DEBUG && std::cout << "\n";
+    return candidates;
 }
 
 /*
@@ -104,18 +132,21 @@ std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query,
  * Any vertex in query_next can be next extendable vertext
  * It is assumed that query_next is not empty
  */
-Vertex get_extendable_vertex(const std::unordered_set<Vertex> &query_next, const CandidateSet &cs) {
+Vertex get_extendable_vertex(const std::unordered_set<Vertex> &query_next,
+                             const Graph &query, const Graph &data, const CandidateSet &cs,
+                             const std::unordered_map<Vertex, Vertex> &embedding) {
   Vertex next = *query_next.begin(); // the first element in the set
   DEBUG && std::cout << "[DEBUG] query_next: " << next;
-  int candidate_size = cs.GetCandidateSize(next);
+  int candidate_size = get_num_extendable_candidates(next, query, data, cs, embedding);
+
   for (auto itr = ++query_next.begin(); itr != query_next.end(); ++itr) {
     Vertex v = *itr;
     DEBUG && std::cout << ", " << v;
-    // choose an element with the smallest candidate size
-    // TODO: the standard should be the size of "extendable candidates", not candidate size in CS
-    if ((int)cs.GetCandidateSize(v) < candidate_size) {
+    // choose an element with the smallest extendable candidate size
+    int temp_candidate_size = get_num_extendable_candidates(v, query, data, cs, embedding);
+    if (temp_candidate_size < candidate_size) {
       next = v;
-      candidate_size = cs.GetCandidateSize(v);
+      candidate_size = temp_candidate_size;
     }
   }
   DEBUG && std::cout << "\n";
@@ -123,7 +154,6 @@ Vertex get_extendable_vertex(const std::unordered_set<Vertex> &query_next, const
 }
 
 bool verify_embedding(const std::vector<std::pair<Vertex, Vertex>> M) {
-  // int size = M.size();
   std::unordered_set<Vertex> data_visited;
 
   for (auto p : M) {
@@ -170,10 +200,11 @@ void print_embedding(const std::unordered_map<Vertex, Vertex> &embedding) {
     std::cout.rdbuf(coutbuf); // reset cout 
   }
 
-
   if (VERIFY) {
-    std::string result = verify_embedding(M) ? "correct" : "wrong";
-    std::cout << "Embedding is " << result << "\n";
+    bool result = verify_embedding(M);
+    if (!result) ALL_CORRECT = false;
+    // std::string result_string = verify_embedding(M) ? "correct" : "wrong";
+    // std::cout << "Embedding is " << result_string << "\n";
   }
 }
 }  // namespace
@@ -300,7 +331,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       data_visited.insert(current.second);
 
       // Find next extendable vertex
-      Vertex next = get_extendable_vertex(query_next, cs);
+      Vertex next = get_extendable_vertex(query_next, query, data, cs, partial_embedding);
       // std::cout << "[DEBUG] extendable vertex: " << next << "\n";
       pair_to_visit.push(std::pair<Vertex, Vertex>(next, -1));
     }
@@ -309,5 +340,11 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
   if (PRINT_FILE) {
     out.close();
   }
-  std::cout << "[DEBUG] # embeddings: " << cnt << "\n";
+
+  if (VERIFY && ALL_CORRECT) {
+    std::cout << "[DEBUG] All embeddings are correct" << "\n";
+  }
+  if (PRINT_CNT) {
+    std::cout << "[DEBUG] # embeddings: " << cnt << "\n";
+  }
 }
