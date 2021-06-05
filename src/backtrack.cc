@@ -65,11 +65,14 @@ std::vector<Vertex> get_parents(Vertex u, const Graph &query,
 std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query, 
                                           const Graph &data, const CandidateSet &cs,
                                           const std::unordered_map<Vertex, Vertex> &embedding) {
+  
+  DEBUG && std::cout << "[DEBUG2] Get extendable candidates for: " << u << "\n";
   std::vector<Vertex> candidates;
   std::vector<Vertex> parents = get_parents(u, query, embedding);
   // push back in reverse order
   for (int i=cs.GetCandidateSize(u)-1; i>=0; i--) {
     Vertex candidate = cs.GetCandidate(u, i);
+    DEBUG && std::cout << "[DEBUG2] candidate: " << candidate << " ";
     // for every parent of vertex u, if M[u_parent] and candidate are not connected, fail
     bool is_connected = true;
     for (Vertex parent : parents) {
@@ -79,7 +82,7 @@ std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query,
         break;
       }
     }
-
+    DEBUG && std:: cout << "is" << (is_connected? " ": " not ") << "valid\n";
     if (is_connected) {
       candidates.push_back(candidate);
     }
@@ -246,6 +249,10 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
     // (current.first, current.second) is an extendable candidate
     else {
       // Here is where a new pair is added to the embedding
+      if (partial_embedding.find(current.first) != partial_embedding.end()) {
+        Vertex old_data_vertex = partial_embedding[current.first];
+        data_visited.erase(old_data_vertex);
+      }
       partial_embedding[current.first] = current.second; // update partial_embedding
       // std::cout << "[DEBUG] partial embedding size: " << partial_embedding.size() << "\n";
       if (DEBUG) print_embedding(partial_embedding); // for debugging
