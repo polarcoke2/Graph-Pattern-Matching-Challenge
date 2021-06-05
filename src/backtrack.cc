@@ -4,6 +4,7 @@
  */
 
 #include "backtrack.h"
+#include <fstream>
 
 Backtrack::Backtrack() {}
 Backtrack::~Backtrack() {}
@@ -12,7 +13,15 @@ namespace {
 /* Print debugging messages if DEBUG is true */
 bool DEBUG = false;
 /* Verify if an embedding is correct if VERIFY is true  */
-bool VERIFY = true;
+bool VERIFY = false;
+
+/* Print in a debug mode if PRINT_DEBUG is true */
+bool PRINT_DEBUG = false;
+/* Print in a submission format if PRINT_SUBMISSION is true */
+bool PRINT_SUBMISSION = true;
+/* Print in a file if PRINT_FILE is true */
+bool PRINT_FILE = true;
+std::ofstream out;
 
 /* Time complexity: O(|V(query)|) */
 Vertex find_root(const Graph &query, const CandidateSet &cs) {
@@ -66,13 +75,13 @@ std::vector<Vertex> get_extendable_candidates(Vertex u, const Graph &query,
                                           const Graph &data, const CandidateSet &cs,
                                           const std::unordered_map<Vertex, Vertex> &embedding) {
   
-  DEBUG && std::cout << "[DEBUG2] Get extendable candidates for: " << u << "\n";
+  DEBUG && std::cout << "[DEBUG] Get extendable candidates for: " << u << "\n";
   std::vector<Vertex> candidates;
   std::vector<Vertex> parents = get_parents(u, query, embedding);
   // push back in reverse order
   for (int i=cs.GetCandidateSize(u)-1; i>=0; i--) {
     Vertex candidate = cs.GetCandidate(u, i);
-    DEBUG && std::cout << "[DEBUG2] candidate: " << candidate << " ";
+    DEBUG && std::cout << "[DEBUG] candidate: " << candidate << " ";
     // for every parent of vertex u, if M[u_parent] and candidate are not connected, fail
     bool is_connected = true;
     for (Vertex parent : parents) {
@@ -134,11 +143,33 @@ void print_embedding(const std::unordered_map<Vertex, Vertex> &embedding) {
   std::copy(embedding.begin(), embedding.end(), std::back_inserter(M));
   std::sort(M.begin(), M.end()); // the default comparator would do
 
-  std::cout << "{";
-  std::cout << "(" << M[0].first << ", " << M[0].second << ")";
-  for (int i=1; i < (int)M.size(); i++)
-    std::cout << ", (" << M[i].first << ", " << M[i].second << ")";
-  std::cout << "}" << "\n";
+  std::streambuf *coutbuf = std::cout.rdbuf(); //save old buf
+  // PRINT_FILE should be false in a submission version
+  if (PRINT_FILE) {
+    std::cout.rdbuf(out.rdbuf()); // redirect cout to out
+  }
+
+  // Print in a debug mode
+  if (PRINT_DEBUG) {
+    std::cout << "{";
+    std::cout << "(" << M[0].first << ", " << M[0].second << ")";
+    for (int i=1; i < (int)M.size(); i++)
+      std::cout << ", (" << M[i].first << ", " << M[i].second << ")";
+    std::cout << "}" << "\n";
+  }  
+
+  // Print in a submission format. It should be true in a submission version
+  if (PRINT_SUBMISSION) {
+    std::cout << "a";
+    for (int i=0; i < (int)M.size(); i++)
+      std::cout << " " << M[i].second;
+    std::cout << "\n";
+  }
+
+  if (PRINT_FILE) {
+    std::cout.rdbuf(coutbuf); // reset cout 
+  }
+
 
   if (VERIFY) {
     std::string result = verify_embedding(M) ? "correct" : "wrong";
@@ -170,6 +201,10 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
    */ 
   std::stack<std::pair<Vertex, Vertex>> pair_to_visit;
   std::unordered_map<Vertex, Vertex> partial_embedding;
+
+  if (PRINT_FILE) {
+    out.open("out/out.txt");
+  }
   
   Vertex root = find_root(query, cs);
   pair_to_visit.push(std::pair<Vertex, Vertex>(root, -1)); // -1 means NULL
@@ -259,7 +294,7 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
 
       if (partial_embedding.size() == query.GetNumVertices()) {
         print_embedding(partial_embedding);
-        if (cnt++ == limit) break;
+        if (++cnt == limit) break;
         continue;
       }
       data_visited.insert(current.second);
@@ -269,6 +304,10 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
       // std::cout << "[DEBUG] extendable vertex: " << next << "\n";
       pair_to_visit.push(std::pair<Vertex, Vertex>(next, -1));
     }
+  }
+
+  if (PRINT_FILE) {
+    out.close();
   }
   std::cout << "[DEBUG] # embeddings: " << cnt << "\n";
 }
