@@ -9,6 +9,9 @@
 #include "candidate_set.h"
 #include "common.h"
 #include "graph.h"
+#include <stack>
+#include <unordered_map>
+#include <unordered_set>
 
 class Backtrack {
  public:
