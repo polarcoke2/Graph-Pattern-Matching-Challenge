@@ -13,15 +13,18 @@ namespace {
 /* Print debugging messages if DEBUG is true */
 bool DEBUG = false;
 /* Verify if an embedding is correct if VERIFY is true  */
-bool VERIFY = false;
+bool VERIFY = true;
+bool ALL_CORRECT = true;
 
 /* Print in a debug mode if PRINT_DEBUG is true */
-bool PRINT_DEBUG = false;
+bool PRINT_DEBUG = true;
 /* Print in a submission format if PRINT_SUBMISSION is true */
 bool PRINT_SUBMISSION = true;
 /* Print in a file if PRINT_FILE is true */
-bool PRINT_FILE = false;
+bool PRINT_FILE = true;
 std::ofstream out;
+/* Print the number of embeddings if PRINT_CNT is true  */
+bool PRINT_CNT = true;
 
 /* Time complexity: O(|V(query)|) */
 Vertex find_root(const Graph &query, const CandidateSet &cs) {
@@ -74,8 +77,6 @@ std::vector<Vertex> get_parents(Vertex u, const Graph &query,
 int get_num_extendable_candidates(Vertex u, const Graph &query,
                                   const Graph &data, const CandidateSet &cs,
                                   const std::unordered_map<Vertex, Vertex> &embedding) {
-  
-  DEBUG && std::cout << "[DEBUG] Get num extendable candidates for: " << u << "\n";
   int count = 0;
   std::vector<Vertex> parents = get_parents(u, query, embedding);
   // push back in reverse order
@@ -200,8 +201,10 @@ void print_embedding(const std::unordered_map<Vertex, Vertex> &embedding) {
   }
 
   if (VERIFY) {
-    std::string result = verify_embedding(M) ? "correct" : "wrong";
-    std::cout << "Embedding is " << result << "\n";
+    bool result = verify_embedding(M);
+    if (!result) ALL_CORRECT = false;
+    // std::string result_string = verify_embedding(M) ? "correct" : "wrong";
+    // std::cout << "Embedding is " << result_string << "\n";
   }
 }
 }  // namespace
@@ -337,5 +340,11 @@ void Backtrack::PrintAllMatches(const Graph &data, const Graph &query,
   if (PRINT_FILE) {
     out.close();
   }
-  std::cout << "[DEBUG] # embeddings: " << cnt << "\n";
+
+  if (VERIFY && ALL_CORRECT) {
+    std::cout << "[DEBUG] All embeddings are correct" << "\n";
+  }
+  if (PRINT_CNT) {
+    std::cout << "[DEBUG] # embeddings: " << cnt << "\n";
+  }
 }
