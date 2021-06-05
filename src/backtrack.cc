@@ -20,7 +20,7 @@ bool PRINT_DEBUG = false;
 /* Print in a submission format if PRINT_SUBMISSION is true */
 bool PRINT_SUBMISSION = true;
 /* Print in a file if PRINT_FILE is true */
-bool PRINT_FILE = true;
+bool PRINT_FILE = false;
 std::ofstream out;
 
 /* Time complexity: O(|V(query)|) */
