@@ -12,12 +12,12 @@ namespace {
 /* Print debugging messages if DEBUG is true */
 bool DEBUG = false;
 /* Verify if an embedding is correct if VERIFY is true  */
-bool VERIFY = true;
+bool VERIFY = false;
 /* ALL_CORRECT is false if any embedding is not correct */
-bool ALL_CORRECT = true;
+bool ALL_CORRECT = false;
 
 /* Print in a debug mode if PRINT_DEBUG is true */
-bool PRINT_DEBUG = true;
+bool PRINT_DEBUG = false;
 /* Print in a submission format if PRINT_SUBMISSION is true */
 bool PRINT_SUBMISSION = true;
 /* Print in a file if PRINT_FILE is true */
@@ -25,7 +25,7 @@ bool PRINT_FILE = false;
 /* cout is redirected to out if PRINT_FILE is true */
 std::ofstream out;
 /* Print the number of embeddings if PRINT_CNT is true  */
-bool PRINT_CNT = true;
+bool PRINT_CNT = false;
 
 /*
  * Choose a root that leads to minimum search
